@@ -38,8 +38,8 @@
 ## 三、存档在哪
 
 ```
-C:\Games\Roadrash\Save\戴维.RRS
-C:\Games\Roadrash\Save\汤姆.RRS
+<游戏安装目录>\Save\戴维.RRS
+<游戏安装目录>\Save\汤姆.RRS
 ```
 
 - 文件名就是你的**车手名字**，游戏里存盘时起什么名，这里就叫什么。
@@ -115,7 +115,7 @@ C:\Games\Roadrash\Save\汤姆.RRS
 
 ## 六、改坏了怎么恢复
 
-1. 打开 `C:\Games\Roadrash\Save\`，按修改时间排序；
+1. 打开游戏目录下的 `Save\` 文件夹，按修改时间排序；
 2. 找到 `戴维.RRS.bak_2026xxxx_xxxxxx`；
 3. 把它的名字改回 `戴维.RRS`（先删掉/改名现在的 `戴维.RRS`）；
 4. 回游戏读档即可。

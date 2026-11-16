@@ -50,12 +50,13 @@ pip install pillow numpy
 scripts\build.bat
 ```
 
-或指定游戏目录 / 不打包素材：
+脚本会自动在注册表和常见路径里找游戏；也可以手动指定，或者不打包素材：
 
 ```powershell
-.\scripts\build.ps1 -Game "D:\Games\Roadrash"
-.\scripts\build.ps1 -NoAssets      # 界面用占位背景，适合没有游戏的环境
-.\scripts\build.ps1 -Zip           # 额外产出 release zip
+.\scripts\build.ps1                        # 自动查找游戏目录
+.\scripts\build.ps1 -Game "<游戏安装目录>"   # 手动指定（就是含 Images\ 的那一层）
+.\scripts\build.ps1 -NoAssets              # 界面用占位背景，适合没有游戏的环境
+.\scripts\build.ps1 -Zip                   # 额外产出 release zip
 ```
 
 产物在 `dist\暴力摩托存档修改器.exe`。
