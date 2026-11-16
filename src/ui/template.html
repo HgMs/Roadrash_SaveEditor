@@ -41,9 +41,9 @@ body::after{
   box-shadow:0 2px 10px rgba(0,0,0,.6);
 }
 
-#stage{position:fixed;left:50%;top:50%;width:1200px;height:1000px;transform-origin:center center;
+#stage{position:fixed;left:50%;top:50%;width:1200px;height:920px;transform-origin:center center;
   transform:translate(-50%,-50%) scale(var(--k,1))}
-.app{width:1200px;height:1000px;display:flex;flex-direction:column;padding:22px 22px 0}
+.app{width:1200px;height:920px;display:flex;flex-direction:column;padding:22px 22px 0}
 
 /* ---------- header ---------- */
 header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
@@ -155,18 +155,23 @@ main{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
 .chip:active{transform:translateY(1px);box-shadow:0 1px 0 #090605}
 
 /* ---------- level ---------- */
-.lrow{display:flex;gap:9px}
+.lvrow{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.lvlabel{
+  flex:0 0 auto;padding:8px 12px;font:700 12.5px/1 "Microsoft YaHei";color:#e0c4a6;
+  letter-spacing:1.5px;border-left:3px solid var(--orange);background:rgba(255,106,31,.08);
+}
+.lrow{display:flex;gap:8px;flex:1}
 .lv{
-  position:relative;flex:1;height:50px;cursor:pointer;
+  position:relative;flex:1;height:44px;cursor:pointer;
   border:1px solid #3a2a20;background:linear-gradient(160deg,#241a14,#100b08);
   display:flex;align-items:center;justify-content:center;gap:10px;
   transition:transform .15s,border-color .15s,box-shadow .15s;
 }
 .lv .n{
-  font:900 27px/1 "Impact","Arial Black",sans-serif;color:#e6d3b3;
+  font:900 21px/1 "Impact","Arial Black",sans-serif;color:#e6d3b3;
   text-shadow:0 2px 0 #000,0 0 14px rgba(0,0,0,.6);
 }
-.lv .t{font:700 11px/1.25 "Microsoft YaHei";color:#8a6a52;letter-spacing:.5px}
+.lv .t{font:700 10.5px/1.2 "Microsoft YaHei";color:#8a6a52;letter-spacing:.5px}
 .lv:hover{border-color:#7a4a2b;transform:translateY(-1px)}
 .lv:hover .t{color:#c9a98c}
 .lv.on{
@@ -296,15 +301,7 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
   <main>
     <section class="panel">
       <div class="phead">
-        <span class="num">01</span><h2>游戏级别</h2><span class="en">LEVEL</span>
-        <div class="right"><span class="dirty" id="levelDirty">已改</span></div>
-      </div>
-      <div class="lrow" id="levels"></div>
-    </section>
-
-    <section class="panel">
-      <div class="phead">
-        <span class="num">02</span><h2>金钱</h2><span class="en">CASH</span>
+        <span class="num">01</span><h2>金钱</h2><span class="en">CASH</span>
         <div class="right"><span class="dirty" id="cashDirty">已改</span></div>
       </div>
       <div class="mrow">
@@ -322,7 +319,7 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
 
     <section class="panel">
       <div class="phead">
-        <span class="num">03</span><h2>我的摩托车</h2><span class="en">BIKES</span>
+        <span class="num">02</span><h2>我的摩托车</h2><span class="en">BIKES</span>
         <div class="right">
           
           <span class="dirty" id="bikeDirty">已改</span>
@@ -333,8 +330,16 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
 
     <section class="panel">
       <div class="phead">
-        <span class="num">04</span><h2>已通关的赛道</h2><span class="en">COURSES</span>
-        <div class="right"><button class="btn ghost" id="allCourses" style="padding:8px 13px;font-size:12px">全部通关</button></div>
+        <span class="num">03</span><h2>关卡进度</h2><span class="en">LEVEL &amp; COURSES</span>
+        <div class="right">
+          <span class="dirty" id="levelDirty">已改</span>
+          <span class="dirty" id="courseDirty">已改</span>
+          <button class="btn ghost" id="allCourses" style="padding:8px 13px;font-size:12px">全部通关</button>
+        </div>
+      </div>
+      <div class="lvrow">
+        <span class="lvlabel">游戏级别</span>
+        <div class="lrow" id="levels"></div>
       </div>
       <div class="cgrid" id="courses"></div>
     </section>
@@ -446,6 +451,7 @@ function render(){
   const b=build(S);
   $("#cashDirty").classList.toggle("show", b[0x10]!==ORIG[0x10]||b[0x11]!==ORIG[0x11]||b[0x12]!==ORIG[0x12]||b[0x13]!==ORIG[0x13]);
   $("#levelDirty").classList.toggle("show", S.level!==ORIG[10]+1);
+  $("#courseDirty").classList.toggle("show", S.mask!==ORIG[11]);
   $("#bikeDirty").classList.toggle("show", S.bike!==ORIG[12]);
   $("#dirty").classList.toggle("show", isDirty());
 }
@@ -564,7 +570,7 @@ $("#save").onclick=async()=>{
 
 /* 自适应缩放：窗口多大都完整显示 */
 function fit(){
-  const k=Math.min(window.innerWidth/1200, window.innerHeight/1000);
+  const k=Math.min(window.innerWidth/1200, window.innerHeight/920);
   document.documentElement.style.setProperty("--k", (k>1.35?1.35:k).toFixed(3));
 }
 window.addEventListener("resize",fit); fit();
