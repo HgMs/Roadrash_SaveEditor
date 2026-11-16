@@ -77,26 +77,6 @@ header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
   box-shadow:0 2px 6px rgba(0,0,0,.35);
 }
 .filetag:hover{border-color:var(--orange)}
-.saves{
-  position:fixed;top:88px;right:26px;z-index:30;min-width:270px;display:none;
-  background:linear-gradient(180deg,#241b15,#17100c);border:1px solid #4a3325;
-  box-shadow:0 20px 46px rgba(0,0,0,.72);padding:5px;
-}
-.saves.show{display:block}
-.saves .it{display:flex;flex-direction:column;align-items:stretch;gap:3px;
-  padding:9px 11px;cursor:pointer;border-left:3px solid transparent}
-.saves .it:hover{background:rgba(255,106,31,.12);border-left-color:var(--orange)}
-.saves .l1{display:flex;align-items:center;gap:8px}
-.saves .it b{font-size:13.5px;font-weight:700}
-.saves .it small{color:#8a644a;font-size:10.5px;font-family:Consolas,monospace;margin-left:auto}
-.saves .it .tag{
-  font-size:9.5px;font-weight:700;padding:2px 5px;letter-spacing:.5px;
-  border:1px solid #5a3d2a;color:#c9a98c;
-}
-.saves .it .tag.root{border-color:#7a4a1f;color:#e0a86a}
-.saves .it .sum{font-size:11px;color:#9a7c66;font-family:Consolas,"Microsoft YaHei",monospace}
-.saves .it.more{border-top:1px solid #33251c;margin-top:4px;padding-top:10px}
-.saves .it.more b{color:#d9b48c}'
 .filetag .ava{
   width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
   background:linear-gradient(150deg,#ff8f4a,#a5300a);color:#1e0a03;
@@ -109,7 +89,23 @@ header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
   border:1px solid rgba(143,209,139,.45);padding:4px 6px;transform:rotate(-4deg);
 }
 
-/* ---------- panels ---------- */
+/* ---------- empty state ---------- */
+.app.dim{opacity:0;pointer-events:none}
+.empty{
+  position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:20;
+  background:radial-gradient(60% 55% at 50% 45%,rgba(0,0,0,.55),rgba(0,0,0,.86));
+}
+.empty.show{display:flex}
+.ebox{
+  text-align:center;padding:36px 46px;border:1px solid #4a3325;
+  background:linear-gradient(180deg,#241b15,#17100c);
+  box-shadow:0 26px 64px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,190,120,.10);
+}
+.ebox .etitle{font:900 23px/1.2 "Impact","Arial Black","Microsoft YaHei",sans-serif;
+  letter-spacing:2px;color:#f1e0c2;text-shadow:0 2px 0 #000}
+.ebox .etext{margin:11px 0 22px;font-size:12.5px;line-height:1.8;color:#9a7c66}
+
+/* ---------- panels ---------- */'
 main{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
 .panel{
   position:relative;padding:12px 16px 12px;border:1px solid var(--line);
@@ -295,16 +291,15 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
     <div class="plate"><span>RR</span></div>
     <div class="brand">
       <h1>存档修改器</h1>
-      <p>ROAD RASH · SAVE EDITOR · V1.0.3</p>
+      <p>ROAD RASH · SAVE EDITOR · V1.0.4</p>
     </div>
     <div class="spacer"></div>
     <div class="filetag" id="btnOpen" title="换一个存档">
       <div class="ava" id="ava">戴</div>
       <div><b id="fname">戴维.RRS</b><small>点击更换存档</small></div>
-      <div class="ok">已读取</div>
+      <div class="ok" id="readBadge">已读取</div>
     </div>
     <input type="file" id="fileInput" accept=".rrs,.RRS" hidden>
-    <div class="saves" id="saves"></div>
   </header>
 
   <main>
@@ -361,9 +356,17 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
     <span class="dirty" id="dirty">有改动未保存</span>
     <button class="btn ghost" id="reset">放弃修改</button>
     <button class="btn save" id="save">保存到游戏</button>
-  </footer>
-</div></div>
-<div id="toast"></div>
+  '</footer>
+  </div>
+  <div id="empty" class="empty">
+    <div class="ebox">
+      <div class="etitle">还没有选择存档</div>
+      <div class="etext">选一个 <b>.RRS</b> 存档文件开始。<br>下次打开会自动打开它，并从同一个文件夹里找。</div>
+      <button class="btn save" id="pickFirst">选择存档文件</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>'
 
 <script>
 /*__ASSETS__*/
@@ -482,64 +485,55 @@ const API = DESK ? {
   save:(p,b64)=>post("/api/save",{path:p,b64:b64})
 } : null;
 
-let CURRENT="", DEMO_LOADED=false, STARTED=false, SAVES=[];
+let CURRENT="", DEMO_LOADED=false, STARTED=false, LOADED=false;
 const to64=u8=>btoa(Array.from(u8,b=>String.fromCharCode(b)).join(""));
 const from64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 
+/* 没有存档时的空状态：整块界面变暗，中间给一个选文件的按钮 */
+function setEmpty(on){
+  LOADED=!on && !!S;
+  document.querySelector(".app").classList.toggle("dim",on);
+  $("#empty").classList.toggle("show",on);
+  $("#readBadge").style.visibility = on ? "hidden" : "visible";
+  if(on){
+    $("#fname").textContent="未选择存档";
+    $("#ava").textContent="?";
+    document.querySelector(".filetag small").textContent="点击选择 .RRS 文件";
+  }
+}
 function loadFromDisk(res){
-  if(!res||!res.ok){ if(res&&res.msg&&res.msg!=="cancelled") toast(res.msg); return false; }
-  CURRENT=res.path; load(from64(res.b64),res.name); return true;
+  if(!res||!res.ok){
+    if(res&&res.msg&&res.msg!=="cancelled") toast(res.msg);
+    return false;
+  }
+  CURRENT=res.path;
+  load(from64(res.b64),res.name);
+  setEmpty(false);
+  return true;
 }
 function startDemo(){ if(DEMO_LOADED) return; DEMO_LOADED=true; loadDemo("戴维.RRS"); }
 function ensureSomething(){ if(STARTED) return; STARTED=true; startDemo(); }
 
-function renderSavesMenu(){
-  const box=$("#saves");
-  if(!SAVES.length){ box.classList.remove("show"); return; }
-  box.innerHTML=SAVES.map((s,i)=>{
-    const sum=[s.rider, s.level?`${s.level} 级`:null, s.cash?("$"+Number(s.cash).toLocaleString("en-US")):null]
-      .filter(Boolean).join(" · ");
-    const tag=s.tag?`<span class="tag${s.tag==="游戏目录"?" root":""}">${s.tag}</span>`:"";
-    return `<div class="it" data-i="${i}">
-      <div class="l1"><b>${s.name}</b>${tag}<small>${s.mtime}</small></div>
-      <div class="sum">${sum}</div>
-    </div>`;
-  }).join("")
-    + `<div class="it more" data-more="1"><div class="l1"><b>打开其他文件…</b></div></div>`;
-  box.classList.add("show");
+function pickSave(){
+  if(!API){ loadDemo($("#fname").textContent==="戴维.RRS"?"汤姆.RRS":"戴维.RRS"); return; }
+  toast("已打开文件选择框");
+  API.pick().then(loadFromDisk).catch(()=>toast("打开文件失败，请重试"));
 }
-$("#saves").addEventListener("click",e=>{
-  const it=e.target.closest(".it"); if(!it) return;
-  $("#saves").classList.remove("show");
-  if(it.dataset.more){
-    toast("已打开文件选择框，可能弹在窗口后面");
-    API.pick().then(loadFromDisk).catch(()=>toast("打开文件失败，请重试"));
-    return;
-  }
-  const s=SAVES[+it.dataset.i];
-  if(s) API.read(s.path).then(loadFromDisk).catch(()=>toast("读不了这个文件"));
-});
 
 function bootDesktop(){
   if(!API){ ensureSomething(); return; }
+  // 有上次用过的存档就直接打开；没有则显示空状态
   API.boot().then(b=>{
-    SAVES=b.saves||[];
-    if(SAVES.length){
-      return API.read(SAVES[0].path).then(r=>{ if(loadFromDisk(r)) STARTED=true; else ensureSomething(); });
+    if(b && b.last){
+      return API.read(b.last).then(r=>{ if(!loadFromDisk(r)) setEmpty(true); })
+                               .catch(()=>setEmpty(true));
     }
-    ensureSomething();
-    toast("没找到游戏存档，点右上角选一个 .RRS 文件");
-  }).catch(()=>ensureSomething());
+    setEmpty(true);
+  }).catch(()=>setEmpty(true));
 }
 
-$("#btnOpen").onclick=e=>{
-  if(API){ e.stopPropagation(); renderSavesMenu(); return; }
-  loadDemo($("#fname").textContent==="戴维.RRS"?"汤姆.RRS":"戴维.RRS");
-};
-document.addEventListener("click",e=>{
-  if(!e.target.closest("#saves")&&!e.target.closest("#btnOpen")) $("#saves").classList.remove("show");
-});
-$("#fileInput").onchange=e=>{const f=e.target.files[0]; if(!f) return;
+$("#btnOpen").onclick=pickSave;
+$("#pickFirst").onclick=pickSave;$("#fileInput").onchange=e=>{const f=e.target.files[0]; if(!f) return;
   f.arrayBuffer().then(ab=>load(new Uint8Array(ab),f.name));};
 window.addEventListener("dragover",e=>e.preventDefault());
 window.addEventListener("drop",e=>{e.preventDefault();const f=e.dataTransfer.files[0]; if(!f) return;
@@ -558,6 +552,7 @@ $("#boost").onclick=()=>{S.cash=99999999;S.level=5;S.mask=0x1f;S.bike=11;render(
 $("#reset").onclick=()=>{S=parse(ORIG,S.name);render();toast("已恢复成打开时的样子");};
 
 $("#save").onclick=async()=>{
+  if(!S){ pickSave(); return; }
   const b=build(S);
   /* ---------- 桌面版：直接写回游戏目录 ---------- */
   if(API){

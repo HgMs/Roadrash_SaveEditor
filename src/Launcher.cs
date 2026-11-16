@@ -15,8 +15,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Road Rash Save Editor")]
 [assembly: AssemblyDescription("暴力摩托（Road Rash 1996）存档修改器")]
 [assembly: AssemblyProduct("RoadRashSaveEditor")]
-[assembly: AssemblyVersion("1.0.3.0")]
-[assembly: AssemblyFileVersion("1.0.3.0")]
+[assembly: AssemblyVersion("1.0.4.0")]
+[assembly: AssemblyFileVersion("1.0.4.0")]
 
 namespace RRS
 {
@@ -25,6 +25,7 @@ namespace RRS
         static string AppDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RoadRashSaveEditor");
         static string LastDirFile = Path.Combine(AppDir, "lastdir.txt");
+        static string LastSaveFile = Path.Combine(AppDir, "lastsave.txt");
         static DateTime LastPing = DateTime.Now;
         static DateTime Started = DateTime.Now;
         static int Port;
@@ -34,6 +35,10 @@ namespace RRS
         [DllImport("user32.dll")] static extern bool MoveWindow(IntPtr h, int x, int y, int w, int hh, bool r);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindow(string cls, string title);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern bool PostMessage(IntPtr h, uint msg, IntPtr a, IntPtr b);
+        [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
+        [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+        static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+        const uint SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_SHOWWINDOW = 0x0040;
         const string WinTitle = "暴力摩托 · 存档修改器";
 
         [STAThread]
@@ -264,6 +269,24 @@ namespace RRS
             return null;
         }
 
+        static string LastSave()
+        {
+            try
+            {
+                if (!File.Exists(LastSaveFile)) return null;
+                var p = File.ReadAllText(LastSaveFile).Trim();
+                return (p.Length > 0 && File.Exists(p)) ? p : null;
+            }
+            catch { return null; }
+        }
+
+        /// <summary>记住上次选的存档文件，同时记住它所在目录。</summary>
+        static void SaveLast(string path)
+        {
+            try { File.WriteAllText(LastSaveFile, path); } catch { }
+            try { File.WriteAllText(LastDirFile, Path.GetDirectoryName(path)); } catch { }
+        }
+
         static List<string> GameDirs()
         {
             var list = new List<string>();
@@ -318,91 +341,24 @@ namespace RRS
             return list;
         }
 
-        class SaveInfo
+        /// <summary>默认打开的目录：上次用过的目录 → 注册表/常见路径里第一个存在的。</summary>
+        static string DefaultDir()
         {
-            public string name, path, mtime, rider, tag;
-            public int level, cash;
-            public bool ok;
-            public DateTime t;
-        }
-
-        static readonly string[] RIDER_NAMES = { "戴维", "杰斐逊", "露西娅", "荘臣", "姆克迪", "塞利娜", "汤姆", "迈克" };
-
-        /// <summary>从 160 字节存档里读出车手/级别/金钱，用于列表摘要。</summary>
-        static void ReadSummary(SaveInfo s)
-        {
-            try
-            {
-                var b = File.ReadAllBytes(s.path);
-                if (b.Length != 160) return;
-                int rider = b[9];
-                s.rider = (rider >= 1 && rider <= 8) ? RIDER_NAMES[rider - 1] : "未知";
-                s.level = b[10] + 1;
-                s.cash = BitConverter.ToInt32(b, 0x10);
-                s.ok = true;
-            }
-            catch { }
-        }
-
-        static List<SaveInfo> FindSaves()
-        {
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var res = new List<SaveInfo>();
+            var f = LastSave();
+            if (!string.IsNullOrEmpty(f)) return Path.GetDirectoryName(f);
+            var last = LastDir();
+            if (!string.IsNullOrEmpty(last) && Directory.Exists(last)) return last;
             foreach (var d in GameDirs())
-            {
-                try
-                {
-                    if (!Directory.Exists(d)) continue;
-                    foreach (var f in Directory.GetFiles(d, "*.RRS"))
-                    {
-                        var full = Path.GetFullPath(f);
-                        if (!seen.Add(full)) continue;
-                        var fi = new FileInfo(full);
-                        if (fi.Length != 160) continue;
-                        var info = new SaveInfo
-                        {
-                            name = fi.Name, path = full,
-                            mtime = fi.LastWriteTime.ToString("MM-dd HH:mm"), t = fi.LastWriteTime,
-                            tag = full.IndexOf("\\Save\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "存档" : "游戏目录"
-                        };
-                        ReadSummary(info);
-                        res.Add(info);
-                    }
-                }
-                catch { }
-            }
-            res.Sort((a, b) => b.t.CompareTo(a.t));
-            return res;
+                if (!string.IsNullOrEmpty(d) && Directory.Exists(d)) return d;
+            return null;
         }
 
         static string Bootstrap()
         {
-            var saves = FindSaves();
-            var sb = new StringBuilder();
-            sb.Append("{\"ok\":true,\"running\":").Append(GameRunning() ? "true" : "false").Append(",\"saves\":[");
-            for (int i = 0; i < saves.Count; i++)
-            {
-                if (i > 0) sb.Append(',');
-                var s = saves[i];
-                sb.Append("{\"name\":").Append(J(s.name))
-                  .Append(",\"path\":").Append(J(s.path))
-                  .Append(",\"mtime\":").Append(J(s.mtime))
-                  .Append(",\"tag\":").Append(J(s.tag))
-                  .Append(",\"rider\":").Append(J(s.rider ?? ""))
-                  .Append(",\"level\":").Append(s.ok ? s.level : 0)
-                  .Append(",\"cash\":").Append(s.ok ? s.cash : 0)
-                  .Append('}');
-            }
-            sb.Append("]}");
-            if (saves.Count > 0) SaveLastDir(Path.GetDirectoryName(saves[0].path));
-            return sb.ToString();
+            return "{\"ok\":true,\"running\":" + (GameRunning() ? "true" : "false") +
+                   ",\"dir\":" + J(DefaultDir() ?? "") +
+                   ",\"last\":" + J(LastSave() ?? "") + "}";
         }
-
-        static void SaveLastDir(string dir)
-        {
-            try { File.WriteAllText(LastDirFile, dir); } catch { }
-        }
-
         static string ReadSave(string path)
         {
             try
@@ -426,11 +382,27 @@ namespace RRS
                 return "{\"ok\":false,\"msg\":\"已经有一个选择窗口打开了\"}";
             try
             {
+                // 把选择框顶到最前（不抢焦点），避免躲在 Edge 窗口后面
+                var lift = new Thread(() =>
+                {
+                    for (int i = 0; i < 20; i++)
+                    {
+                        Thread.Sleep(200);
+                        IntPtr dlgWnd = FindWindow(null, "选择暴力摩托存档");
+                        if (dlgWnd != IntPtr.Zero)
+                        {
+                            SetWindowPos(dlgWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+                            SetForegroundWindow(dlgWnd);
+                            break;
+                        }
+                    }
+                }) { IsBackground = true };
+                lift.Start();
                 return (string)UiHost.Invoke(new Func<string>(delegate
                 {
                     try
                     {
-                        string start = LastDir();
+                        string start = DefaultDir();
                         using (var dlg = new OpenFileDialog())
                         {
                             dlg.Title = "选择暴力摩托存档";
@@ -438,8 +410,13 @@ namespace RRS
                             if (!string.IsNullOrEmpty(start) && Directory.Exists(start))
                                 dlg.InitialDirectory = start;
                             dlg.RestoreDirectory = true;
-                            if (dlg.ShowDialog(UiHost) == DialogResult.OK)
-                                return ReadSave(dlg.FileName);
+                            if (dlg.ShowDialog() == DialogResult.OK)
+                            {
+                                var res = ReadSave(dlg.FileName);
+                                if (res.IndexOf("\"ok\":true", StringComparison.Ordinal) > 0)
+                                    SaveLast(dlg.FileName);
+                                return res;
+                            }
                         }
                     }
                     catch (Exception e)
@@ -483,7 +460,7 @@ namespace RRS
                 File.Copy(tmp, path, true);          // 覆盖写；失败时原文件仍在
                 try { File.Delete(tmp); } catch { }
                 if (new FileInfo(path).Length != 160) throw new IOException("写入后大小不对");
-                SaveLastDir(Path.GetDirectoryName(path));
+                SaveLast(path);
                 return "{\"ok\":true,\"name\":" + J(Path.GetFileName(path)) +
                        ",\"backup\":" + J(Path.GetFileName(bak)) + "}";
             }
