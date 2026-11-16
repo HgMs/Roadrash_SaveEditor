@@ -41,9 +41,9 @@ body::after{
   box-shadow:0 2px 10px rgba(0,0,0,.6);
 }
 
-#stage{position:fixed;left:50%;top:50%;width:1200px;height:900px;transform-origin:center center;
+#stage{position:fixed;left:50%;top:50%;width:1200px;height:1000px;transform-origin:center center;
   transform:translate(-50%,-50%) scale(var(--k,1))}
-.app{width:1200px;height:900px;display:flex;flex-direction:column;padding:22px 22px 0}
+.app{width:1200px;height:1000px;display:flex;flex-direction:column;padding:22px 22px 0}
 
 /* ---------- header ---------- */
 header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
@@ -103,7 +103,7 @@ header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
 /* ---------- panels ---------- */
 main{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
 .panel{
-  position:relative;padding:12px 16px 14px;border:1px solid var(--line);
+  position:relative;padding:12px 16px 12px;border:1px solid var(--line);
   background:
     linear-gradient(180deg,rgba(255,170,90,.055),rgba(255,255,255,0) 42%),
     repeating-linear-gradient(92deg,rgba(255,255,255,.014) 0 2px,transparent 2px 5px),
@@ -154,10 +154,39 @@ main{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
 .chip:hover{color:#ffd0a8;border-color:#7a4a2b}
 .chip:active{transform:translateY(1px);box-shadow:0 1px 0 #090605}
 
+/* ---------- level ---------- */
+.lrow{display:flex;gap:9px}
+.lv{
+  position:relative;flex:1;height:50px;cursor:pointer;
+  border:1px solid #3a2a20;background:linear-gradient(160deg,#241a14,#100b08);
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:transform .15s,border-color .15s,box-shadow .15s;
+}
+.lv .n{
+  font:900 27px/1 "Impact","Arial Black",sans-serif;color:#e6d3b3;
+  text-shadow:0 2px 0 #000,0 0 14px rgba(0,0,0,.6);
+}
+.lv .t{font:700 11px/1.25 "Microsoft YaHei";color:#8a6a52;letter-spacing:.5px}
+.lv:hover{border-color:#7a4a2b;transform:translateY(-1px)}
+.lv:hover .t{color:#c9a98c}
+.lv.on{
+  border-color:var(--orange);
+  background:linear-gradient(180deg,rgba(255,106,31,.24),rgba(255,106,31,.05));
+  box-shadow:0 0 0 2px rgba(255,106,31,.38),0 0 24px rgba(255,106,31,.22);
+}
+.lv.on .n{color:#ffdcbc}
+.lv.on .t{color:#f1e0c2}
+.lv .now{
+  position:absolute;top:-9px;right:9px;padding:3px 7px;transform:rotate(4deg);
+  background:var(--orange);color:#1a0a04;font:900 9px/1 "Microsoft YaHei";
+  opacity:0;transition:.15s;
+}
+.lv.on .now{opacity:1}
+
 /* ---------- bikes ---------- */
 .bgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .bike{
-  position:relative;height:96px;overflow:hidden;cursor:pointer;
+  position:relative;height:94px;overflow:hidden;cursor:pointer;
   border:1px solid #3a2a20;background:#0d0906;
   transition:transform .15s,border-color .15s,box-shadow .15s;
 }
@@ -185,7 +214,7 @@ main{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
 .bike.on .mark{opacity:1}
 /* ---------- courses ---------- */
 .cgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.course{position:relative;height:124px;overflow:hidden;cursor:pointer;border:1px solid #3a2a20;background:#0d0908;transition:.15s}
+.course{position:relative;height:118px;overflow:hidden;cursor:pointer;border:1px solid #3a2a20;background:#0d0908;transition:.15s}
 .course img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
   filter:grayscale(.62) brightness(.5) contrast(1.08);transition:.25s}
 .course .cap{position:absolute;left:0;right:0;bottom:0;padding:9px 10px 8px;
@@ -252,7 +281,7 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
     <div class="plate"><span>RR</span></div>
     <div class="brand">
       <h1>存档修改器</h1>
-      <p>ROAD RASH · SAVE EDITOR · V1.0.0</p>
+      <p>ROAD RASH · SAVE EDITOR · V1.0.1</p>
     </div>
     <div class="spacer"></div>
     <div class="tag" id="btnOpen" title="换一个存档">
@@ -267,7 +296,15 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
   <main>
     <section class="panel">
       <div class="phead">
-        <span class="num">01</span><h2>金钱</h2><span class="en">CASH</span>
+        <span class="num">01</span><h2>游戏级别</h2><span class="en">LEVEL</span>
+        <div class="right"><span class="dirty" id="levelDirty">已改</span></div>
+      </div>
+      <div class="lrow" id="levels"></div>
+    </section>
+
+    <section class="panel">
+      <div class="phead">
+        <span class="num">02</span><h2>金钱</h2><span class="en">CASH</span>
         <div class="right"><span class="dirty" id="cashDirty">已改</span></div>
       </div>
       <div class="mrow">
@@ -285,7 +322,7 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
 
     <section class="panel">
       <div class="phead">
-        <span class="num">02</span><h2>我的摩托车</h2><span class="en">BIKES</span>
+        <span class="num">03</span><h2>我的摩托车</h2><span class="en">BIKES</span>
         <div class="right">
           
           <span class="dirty" id="bikeDirty">已改</span>
@@ -296,7 +333,7 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
 
     <section class="panel">
       <div class="phead">
-        <span class="num">03</span><h2>已通关的关卡</h2><span class="en">COURSES</span>
+        <span class="num">04</span><h2>已通关的赛道</h2><span class="en">COURSES</span>
         <div class="right"><button class="btn ghost" id="allCourses" style="padding:8px 13px;font-size:12px">全部通关</button></div>
       </div>
       <div class="cgrid" id="courses"></div>
@@ -305,7 +342,7 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
 
   <footer>
     <button class="btn boost" id="boost">一键变强</button>
-    <span class="fhint">满金钱 · 全关卡 · 顶级摩托</span>
+    <span class="fhint">满金钱 · 5 级 · 全赛道 · 顶级摩托</span>
     <span class="grow"></span>
     <span class="dirty" id="dirty">有改动未保存</span>
     <button class="btn ghost" id="reset">放弃修改</button>
@@ -364,6 +401,16 @@ function toast(html){const t=$("#toast");t.innerHTML=html;t.classList.add("show"
   clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2600);}
 function isDirty(){const a=build(S);for(let i=4;i<160;i++) if(a[i]!==ORIG[i]) return true;return false;}
 
+function renderLevels(){
+  const box=$("#levels"); box.innerHTML="";
+  for(let v=1;v<=5;v++){
+    const el=document.createElement("div");
+    el.className="lv"+(v===S.level?" on":"");
+    el.innerHTML=`<div class="now">当前</div><div class="n">${v}</div><div class="t">第 ${v} 级</div>`;
+    el.onclick=()=>{S.level=v;render();};
+    box.appendChild(el);
+  }
+}
 function renderBikes(){
   const box=$("#bikes"); box.innerHTML="";
   BIKES.forEach((b,i)=>{
@@ -395,9 +442,10 @@ function render(){
   $("#fname").textContent=S.name;
   $("#ava").textContent=NAMES[S.rider-1].slice(0,1);
   $("#cash").value=S.cash;
-  renderBikes(); renderCourses();
+  renderLevels(); renderBikes(); renderCourses();
   const b=build(S);
   $("#cashDirty").classList.toggle("show", b[0x10]!==ORIG[0x10]||b[0x11]!==ORIG[0x11]||b[0x12]!==ORIG[0x12]||b[0x13]!==ORIG[0x13]);
+  $("#levelDirty").classList.toggle("show", S.level!==ORIG[10]+1);
   $("#bikeDirty").classList.toggle("show", S.bike!==ORIG[12]);
   $("#dirty").classList.toggle("show", isDirty());
 }
@@ -477,8 +525,8 @@ document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{
   if(c.dataset.add) S.cash=Math.min(2147483647,S.cash+parseInt(c.dataset.add,10));
   if(c.dataset.set) S.cash=parseInt(c.dataset.set,10);
   render();});
-$("#allCourses").onclick=()=>{S.mask=0x1f;render();toast("5 条关卡已全部点亮");};
-$("#boost").onclick=()=>{S.cash=99999999;S.mask=0x1f;S.bike=11;render();
+$("#allCourses").onclick=()=>{S.mask=0x1f;render();toast("5 条赛道已全部点亮");};
+$("#boost").onclick=()=>{S.cash=99999999;S.level=5;S.mask=0x1f;S.bike=11;render();
   toast('<span class="k">✓</span> 已调到最强，记得点“保存到游戏”');};
 $("#reset").onclick=()=>{S=parse(ORIG,S.name);render();toast("已恢复成打开时的样子");};
 
@@ -516,7 +564,7 @@ $("#save").onclick=async()=>{
 
 /* 自适应缩放：窗口多大都完整显示 */
 function fit(){
-  const k=Math.min(window.innerWidth/1200, window.innerHeight/900);
+  const k=Math.min(window.innerWidth/1200, window.innerHeight/1000);
   document.documentElement.style.setProperty("--k", (k>1.35?1.35:k).toFixed(3));
 }
 window.addEventListener("resize",fit); fit();
@@ -528,7 +576,7 @@ if(API){
 }else{
   setTimeout(ensureSomething,400);
 }
-if(location.hash==="#boost"){S.cash=99999999;S.mask=0x1f;S.bike=11;render();
+if(location.hash==="#boost"){S.cash=99999999;S.level=5;S.mask=0x1f;S.bike=11;render();
   toast('<span class="k">✓</span> 已调到最强，记得点“保存到游戏”');}
 </script>
 </body>

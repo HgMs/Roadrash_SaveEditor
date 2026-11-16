@@ -15,8 +15,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Road Rash Save Editor")]
 [assembly: AssemblyDescription("暴力摩托（Road Rash 1996）存档修改器")]
 [assembly: AssemblyProduct("RoadRashSaveEditor")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.1.0")]
+[assembly: AssemblyFileVersion("1.0.1.0")]
 
 namespace RRS
 {
@@ -63,7 +63,10 @@ namespace RRS
                 int winW = 1300, winH = 940;
                 var psi = new ProcessStartInfo(edge,
                     "--app=" + url + " --window-size=" + winW + "," + winH +
-                    " --user-data-dir=\"" + profile + "\" --no-first-run --no-default-browser-check");
+                    " --user-data-dir=\"" + profile + "\"" +
+                    " --no-first-run --no-default-browser-check --no-service-autorun --disable-sync" +
+                    " --disable-background-networking" +
+                    " --disable-features=msEdgeSyncPromo,msImplicitSignin,msEdgeIdentity");
                 psi.UseShellExecute = false;
                 try
                 {
