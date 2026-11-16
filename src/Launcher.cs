@@ -15,8 +15,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Road Rash Save Editor")]
 [assembly: AssemblyDescription("暴力摩托（Road Rash 1996）存档修改器")]
 [assembly: AssemblyProduct("RoadRashSaveEditor")]
-[assembly: AssemblyVersion("1.0.1.0")]
-[assembly: AssemblyFileVersion("1.0.1.0")]
+[assembly: AssemblyVersion("1.0.2.0")]
+[assembly: AssemblyFileVersion("1.0.2.0")]
 
 namespace RRS
 {
@@ -28,6 +28,7 @@ namespace RRS
         static DateTime LastPing = DateTime.Now;
         static DateTime Started = DateTime.Now;
         static int Port;
+        static Form UiHost;
 
         [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
         [DllImport("user32.dll")] static extern bool MoveWindow(IntPtr h, int x, int y, int w, int hh, bool r);
@@ -96,13 +97,26 @@ namespace RRS
                 try { Process.Start(url); } catch { }
             }
 
-            // 窗口关掉 → 心跳停止 → 25 秒后自己退出
-            while (true)
+            // 用一个隐藏窗体提供消息循环：文件选择框必须在带消息泵的 UI 线程上弹
+            UiHost = new Form
             {
-                Thread.Sleep(1000);
+                FormBorderStyle = FormBorderStyle.None,
+                StartPosition = FormStartPosition.Manual,
+                Bounds = new Rectangle(-4000, -4000, 1, 1),
+                ShowInTaskbar = false,
+                TopMost = true
+            };
+            var idle = new System.Windows.Forms.Timer { Interval = 1000 };
+            idle.Tick += (s, e) =>
+            {
+                // 窗口关掉 → 心跳停止 → 25 秒后自己退出
                 if ((DateTime.Now - Started).TotalSeconds > 8 &&
-                    (DateTime.Now - LastPing).TotalSeconds > 25) break;
-            }
+                    (DateTime.Now - LastPing).TotalSeconds > 25)
+                    Application.Exit();
+            };
+            idle.Start();
+            Application.EnableVisualStyles();
+            Application.Run(UiHost);
         }
 
         static int FreePort()
@@ -368,19 +382,49 @@ namespace RRS
             catch { return "{\"ok\":false,\"msg\":\"读不了这个文件\"}"; }
         }
 
+        static int Picking = 0;
+
+        /// <summary>弹出系统文件选择框。必须在带消息泵的 UI 线程上执行。</summary>
         static string PickSave()
         {
-            string start = LastDir();
-            using (var dlg = new OpenFileDialog())
+            if (UiHost == null || UiHost.IsDisposed || !UiHost.IsHandleCreated)
+                return "{\"ok\":false,\"msg\":\"界面还没准备好，请稍后再试\"}";
+            if (Interlocked.CompareExchange(ref Picking, 1, 0) != 0)
+                return "{\"ok\":false,\"msg\":\"已经有一个选择窗口打开了\"}";
+            try
             {
-                dlg.Title = "选择暴力摩托存档";
-                dlg.Filter = "暴力摩托存档 (*.RRS)|*.RRS|所有文件 (*.*)|*.*";
-                if (!string.IsNullOrEmpty(start) && Directory.Exists(start)) dlg.InitialDirectory = start;
-                if (dlg.ShowDialog() != DialogResult.OK) return "{\"ok\":false,\"msg\":\"cancelled\"}";
-                return ReadSave(dlg.FileName);
+                return (string)UiHost.Invoke(new Func<string>(delegate
+                {
+                    try
+                    {
+                        string start = LastDir();
+                        using (var dlg = new OpenFileDialog())
+                        {
+                            dlg.Title = "选择暴力摩托存档";
+                            dlg.Filter = "暴力摩托存档 (*.RRS)|*.RRS|所有文件 (*.*)|*.*";
+                            if (!string.IsNullOrEmpty(start) && Directory.Exists(start))
+                                dlg.InitialDirectory = start;
+                            dlg.RestoreDirectory = true;
+                            if (dlg.ShowDialog(UiHost) == DialogResult.OK)
+                                return ReadSave(dlg.FileName);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        return "{\"ok\":false,\"msg\":" + J("选择窗口打不开：" + e.Message) + "}";
+                    }
+                    return "{\"ok\":false,\"msg\":\"cancelled\"}";
+                }));
+            }
+            catch (Exception e)
+            {
+                return "{\"ok\":false,\"msg\":" + J("打开选择窗口失败：" + e.Message) + "}";
+            }
+            finally
+            {
+                Interlocked.Exchange(ref Picking, 0);
             }
         }
-
         static string Save(string path, string b64)
         {
             if (GameRunning())

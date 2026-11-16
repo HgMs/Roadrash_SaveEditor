@@ -286,7 +286,7 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
     <div class="plate"><span>RR</span></div>
     <div class="brand">
       <h1>存档修改器</h1>
-      <p>ROAD RASH · SAVE EDITOR · V1.0.1</p>
+      <p>ROAD RASH · SAVE EDITOR · V1.0.2</p>
     </div>
     <div class="spacer"></div>
     <div class="tag" id="btnOpen" title="换一个存档">
@@ -495,8 +495,13 @@ function renderSavesMenu(){
 $("#saves").addEventListener("click",e=>{
   const it=e.target.closest(".it"); if(!it) return;
   $("#saves").classList.remove("show");
-  if(it.dataset.more){ API.pick().then(loadFromDisk); return; }
-  const s=SAVES[+it.dataset.i]; if(s) API.read(s.path).then(loadFromDisk);
+  if(it.dataset.more){
+    toast("已打开文件选择框，可能弹在窗口后面");
+    API.pick().then(loadFromDisk).catch(()=>toast("打开文件失败，请重试"));
+    return;
+  }
+  const s=SAVES[+it.dataset.i];
+  if(s) API.read(s.path).then(loadFromDisk).catch(()=>toast("读不了这个文件"));
 });
 
 function bootDesktop(){
