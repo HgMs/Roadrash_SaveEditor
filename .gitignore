@@ -1,0 +1,24 @@
+# 构建产物
+/dist/
+/build/
+/src/ui/rrs_editor.html
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 编辑器 / 系统
+.vs/
+.vscode/
+.idea/
+*.user
+Thumbs.db
+desktop.ini
+
+# 存档文件绝不入库
+*.RRS
+*.RRS.bak_*
+*.rrs.bak_*

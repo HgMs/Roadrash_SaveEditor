@@ -1,0 +1,43 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install pillow numpy
+
+      # CI 里没有游戏目录，所以生成「无素材」占位版，只验证构建链路本身
+      - name: Build UI (placeholder, no game assets)
+        run: python src/build_assets.py --no-assets --out build/rrs_editor.html
+
+      - name: Compile exe
+        shell: pwsh
+        run: |
+          $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          if (-not (Test-Path $csc)) { throw "csc.exe not found" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          & $csc /nologo /target:winexe /optimize+ /out:"dist/暴力摩托存档修改器.exe" `
+            /win32icon:"src/ui/icon.ico" `
+            /resource:"build/rrs_editor.html",rrs_editor.html `
+            /r:System.dll /r:System.Windows.Forms.dll /r:System.Drawing.dll `
+            "src/Launcher.cs"
+          if (-not (Test-Path "dist/暴力摩托存档修改器.exe")) { throw "build failed" }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rrs-editor-placeholder
+          path: dist/*.exe
