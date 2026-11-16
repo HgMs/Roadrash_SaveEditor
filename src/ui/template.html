@@ -16,7 +16,9 @@ body{
   color:var(--cream);
   font:14px/1.45 "Microsoft YaHei","Segoe UI",sans-serif;
   overflow:hidden;display:flex;align-items:center;justify-content:center;
+  user-select:none;-webkit-user-select:none;
 }
+input,textarea{user-select:text;-webkit-user-select:text}
 /* 背景：游戏素材生成的脏旧墙面 */
 body::before{
   content:"";position:fixed;inset:0;
@@ -62,40 +64,47 @@ header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
 .brand p{margin-top:5px;font:700 10px/1 Consolas,monospace;letter-spacing:4px;color:#8a644a}
 .spacer{flex:1}
 
-.tag{
+.filetag{
   position:relative;display:flex;align-items:center;gap:10px;
   padding:9px 16px 9px 12px;cursor:pointer;transform:rotate(.6deg);
   background:linear-gradient(180deg,#2a1f19,#1a120e);
   border:1px solid #4a3325;box-shadow:0 6px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
   transition:.15s;
 }
-.tag::before{
+.filetag::before{
   content:"";position:absolute;top:-7px;left:18px;width:58px;height:15px;
   background:rgba(226,196,140,.28);transform:rotate(-4deg);
   box-shadow:0 2px 6px rgba(0,0,0,.35);
 }
-.tag:hover{border-color:var(--orange)}
+.filetag:hover{border-color:var(--orange)}
 .saves{
   position:fixed;top:88px;right:26px;z-index:30;min-width:270px;display:none;
   background:linear-gradient(180deg,#241b15,#17100c);border:1px solid #4a3325;
   box-shadow:0 20px 46px rgba(0,0,0,.72);padding:5px;
 }
 .saves.show{display:block}
-.saves .it{display:flex;align-items:center;justify-content:space-between;gap:14px;
+.saves .it{display:flex;flex-direction:column;align-items:stretch;gap:3px;
   padding:9px 11px;cursor:pointer;border-left:3px solid transparent}
 .saves .it:hover{background:rgba(255,106,31,.12);border-left-color:var(--orange)}
+.saves .l1{display:flex;align-items:center;gap:8px}
 .saves .it b{font-size:13.5px;font-weight:700}
-.saves .it small{color:#8a644a;font-size:10.5px;font-family:Consolas,monospace}
+.saves .it small{color:#8a644a;font-size:10.5px;font-family:Consolas,monospace;margin-left:auto}
+.saves .it .tag{
+  font-size:9.5px;font-weight:700;padding:2px 5px;letter-spacing:.5px;
+  border:1px solid #5a3d2a;color:#c9a98c;
+}
+.saves .it .tag.root{border-color:#7a4a1f;color:#e0a86a}
+.saves .it .sum{font-size:11px;color:#9a7c66;font-family:Consolas,"Microsoft YaHei",monospace}
 .saves .it.more{border-top:1px solid #33251c;margin-top:4px;padding-top:10px}
 .saves .it.more b{color:#d9b48c}'
-.tag .ava{
+.filetag .ava{
   width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
   background:linear-gradient(150deg,#ff8f4a,#a5300a);color:#1e0a03;
   font:900 14px/1 "Microsoft YaHei";border:1px solid #1a0a04;
 }
-.tag b{display:block;font-size:14px;letter-spacing:.3px}
-.tag small{display:block;font-size:10.5px;color:var(--dim)}
-.tag .ok{
+.filetag b{display:block;font-size:14px;letter-spacing:.3px}
+.filetag small{display:block;font-size:10.5px;color:var(--dim)}
+.filetag .ok{
   font:700 9px/1 Consolas,monospace;letter-spacing:1.5px;color:#8fd18b;
   border:1px solid rgba(143,209,139,.45);padding:4px 6px;transform:rotate(-4deg);
 }
@@ -286,10 +295,10 @@ footer{display:flex;align-items:center;gap:12px;padding:12px 0 16px;margin-top:1
     <div class="plate"><span>RR</span></div>
     <div class="brand">
       <h1>存档修改器</h1>
-      <p>ROAD RASH · SAVE EDITOR · V1.0.2</p>
+      <p>ROAD RASH · SAVE EDITOR · V1.0.3</p>
     </div>
     <div class="spacer"></div>
-    <div class="tag" id="btnOpen" title="换一个存档">
+    <div class="filetag" id="btnOpen" title="换一个存档">
       <div class="ava" id="ava">戴</div>
       <div><b id="fname">戴维.RRS</b><small>点击更换存档</small></div>
       <div class="ok">已读取</div>
@@ -487,9 +496,16 @@ function ensureSomething(){ if(STARTED) return; STARTED=true; startDemo(); }
 function renderSavesMenu(){
   const box=$("#saves");
   if(!SAVES.length){ box.classList.remove("show"); return; }
-  box.innerHTML=SAVES.map((s,i)=>
-    `<div class="it" data-i="${i}"><b>${s.name}</b><small>${s.mtime}</small></div>`).join("")
-    + `<div class="it more" data-more="1"><b>打开其他文件…</b><small></small></div>`;
+  box.innerHTML=SAVES.map((s,i)=>{
+    const sum=[s.rider, s.level?`${s.level} 级`:null, s.cash?("$"+Number(s.cash).toLocaleString("en-US")):null]
+      .filter(Boolean).join(" · ");
+    const tag=s.tag?`<span class="tag${s.tag==="游戏目录"?" root":""}">${s.tag}</span>`:"";
+    return `<div class="it" data-i="${i}">
+      <div class="l1"><b>${s.name}</b>${tag}<small>${s.mtime}</small></div>
+      <div class="sum">${sum}</div>
+    </div>`;
+  }).join("")
+    + `<div class="it more" data-more="1"><div class="l1"><b>打开其他文件…</b></div></div>`;
   box.classList.add("show");
 }
 $("#saves").addEventListener("click",e=>{

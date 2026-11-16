@@ -15,8 +15,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Road Rash Save Editor")]
 [assembly: AssemblyDescription("暴力摩托（Road Rash 1996）存档修改器")]
 [assembly: AssemblyProduct("RoadRashSaveEditor")]
-[assembly: AssemblyVersion("1.0.2.0")]
-[assembly: AssemblyFileVersion("1.0.2.0")]
+[assembly: AssemblyVersion("1.0.3.0")]
+[assembly: AssemblyFileVersion("1.0.3.0")]
 
 namespace RRS
 {
@@ -318,7 +318,31 @@ namespace RRS
             return list;
         }
 
-        class SaveInfo { public string name, path, mtime; public DateTime t; }
+        class SaveInfo
+        {
+            public string name, path, mtime, rider, tag;
+            public int level, cash;
+            public bool ok;
+            public DateTime t;
+        }
+
+        static readonly string[] RIDER_NAMES = { "戴维", "杰斐逊", "露西娅", "荘臣", "姆克迪", "塞利娜", "汤姆", "迈克" };
+
+        /// <summary>从 160 字节存档里读出车手/级别/金钱，用于列表摘要。</summary>
+        static void ReadSummary(SaveInfo s)
+        {
+            try
+            {
+                var b = File.ReadAllBytes(s.path);
+                if (b.Length != 160) return;
+                int rider = b[9];
+                s.rider = (rider >= 1 && rider <= 8) ? RIDER_NAMES[rider - 1] : "未知";
+                s.level = b[10] + 1;
+                s.cash = BitConverter.ToInt32(b, 0x10);
+                s.ok = true;
+            }
+            catch { }
+        }
 
         static List<SaveInfo> FindSaves()
         {
@@ -335,11 +359,14 @@ namespace RRS
                         if (!seen.Add(full)) continue;
                         var fi = new FileInfo(full);
                         if (fi.Length != 160) continue;
-                        res.Add(new SaveInfo
+                        var info = new SaveInfo
                         {
                             name = fi.Name, path = full,
-                            mtime = fi.LastWriteTime.ToString("MM-dd HH:mm"), t = fi.LastWriteTime
-                        });
+                            mtime = fi.LastWriteTime.ToString("MM-dd HH:mm"), t = fi.LastWriteTime,
+                            tag = full.IndexOf("\\Save\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "存档" : "游戏目录"
+                        };
+                        ReadSummary(info);
+                        res.Add(info);
                     }
                 }
                 catch { }
@@ -356,9 +383,15 @@ namespace RRS
             for (int i = 0; i < saves.Count; i++)
             {
                 if (i > 0) sb.Append(',');
-                sb.Append("{\"name\":").Append(J(saves[i].name))
-                  .Append(",\"path\":").Append(J(saves[i].path))
-                  .Append(",\"mtime\":").Append(J(saves[i].mtime)).Append('}');
+                var s = saves[i];
+                sb.Append("{\"name\":").Append(J(s.name))
+                  .Append(",\"path\":").Append(J(s.path))
+                  .Append(",\"mtime\":").Append(J(s.mtime))
+                  .Append(",\"tag\":").Append(J(s.tag))
+                  .Append(",\"rider\":").Append(J(s.rider ?? ""))
+                  .Append(",\"level\":").Append(s.ok ? s.level : 0)
+                  .Append(",\"cash\":").Append(s.ok ? s.cash : 0)
+                  .Append('}');
             }
             sb.Append("]}");
             if (saves.Count > 0) SaveLastDir(Path.GetDirectoryName(saves[0].path));
